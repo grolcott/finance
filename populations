@@ -1,0 +1,62 @@
+import requests
+
+# Function to fetch population data from the World Bank API
+def get_population_data(country_code, start_year, end_year):
+    url = f"https://api.worldbank.org/v2/country/{country_code}/indicator/SP.POP.TOTL?format=json&date={start_year}:{end_year}"
+    response = requests.get(url)
+    data = response.json()
+    return data[1]
+
+# Fetch population data for each country from the World Bank API
+def fetch_population_data(country_codes, start_year, end_year):
+    population_data = {}
+    for code in country_codes:
+        data = get_population_data(code, start_year, end_year)
+        population_data[code] = data
+    return population_data
+
+# Calculate the average annual population growth rate
+def calculate_growth_rate(population_data, start_year, end_year):
+    growth_rates = {}
+    for code, data in population_data.items():
+        start_population = data[0]['value']
+        end_population = data[-1]['value']
+        growth_rate = (end_population / start_population) ** (1 / (end_year - start_year)) - 1
+        growth_rates[code] = growth_rate
+    return growth_rates
+
+# Get country codes and names from the World Bank API
+def get_country_codes():
+    url = "https://api.worldbank.org/v2/country?format=json&per_page=500"
+    response = requests.get(url)
+    data = response.json()
+    country_codes = {}
+    for entry in data[1]:
+        country_codes[entry['id']] = entry['name']
+    return country_codes
+
+# Main function to fetch and analyze population data
+def main():
+    start_year = 2023
+    end_year = 2050
+
+    # Fetch country codes
+    country_codes = get_country_codes()
+
+    # Fetch population data
+    population_data = fetch_population_data(country_codes.keys(), start_year, end_year)
+
+    # Calculate growth rates
+    growth_rates = calculate_growth_rate(population_data, start_year, end_year)
+
+    # Sort countries by growth rate
+    sorted_countries = sorted(growth_rates.items(), key=lambda x: x[1], reverse=True)
+
+    # Print the top 10 fastest-growing countries
+    print("Top 10 fastest-growing countries from now until 2050:")
+    for country_code, growth_rate in sorted_countries[:10]:
+        country_name = country_codes[country_code]
+        print(f"{country_name}: {growth_rate * 100:.2f}%")
+
+if __name__ == '__main__':
+    main()
